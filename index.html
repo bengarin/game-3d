@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crystal Vale</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M16 2 26 14 16 30 6 14Z' fill='%2345e0ff'/></svg>" />
+  <link rel="stylesheet" href="./src/style.css" />
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <!-- In-game HUD -->
+  <div id="hud" class="hidden">
+    <div class="hud-tl panel">
+      <div class="bar-row"><span class="bar-icon heart">&#9829;</span>
+        <div class="bar"><div id="health-ghost" class="bar-ghost"></div><div id="health-fill" class="bar-fill health"></div></div>
+        <span id="health-text" class="bar-text">100</span></div>
+      <div class="bar-row"><span class="bar-icon bolt">&#9889;</span>
+        <div class="bar thin"><div id="stamina-fill" class="bar-fill stamina"></div></div></div>
+    </div>
+    <div class="hud-tr panel">
+      <div class="stat"><span class="label">Score</span><span id="score" class="value">0</span></div>
+      <div class="stat"><span class="label">Time</span><span id="time" class="value small">0:00</span></div>
+      <div id="crystal-row" class="crystal-row"></div>
+    </div>
+    <div id="objective" class="objective panel"></div>
+    <div id="prompt" class="prompt hidden"><kbd>E</kbd><span id="prompt-text"></span></div>
+    <div id="hint" class="hint hidden"></div>
+    <div id="toasts" class="toasts"></div>
+    <canvas id="minimap" width="170" height="170"></canvas>
+    <div id="crosshair-help" class="help-strip">
+      <span><kbd>WASD</kbd> Move</span><span><kbd>Shift</kbd> Run</span><span><kbd>Space</kbd> Jump</span>
+      <span><kbd>C</kbd> Crouch</span><span><kbd>F</kbd>/<kbd>Click</kbd> Punch</span><span><kbd>E</kbd> Interact</span><span><kbd>Esc</kbd> Pause</span>
+    </div>
+  </div>
+  <div id="vignette"></div>
+  <div id="fade"></div>
+
+  <!-- Loading -->
+  <section id="loading" class="screen">
+    <div class="logo"><span class="gem"></span><h1>Crystal Vale</h1></div>
+    <div class="loader"><div id="load-fill"></div></div>
+    <p id="load-text" class="muted">Growing the forest&hellip;</p>
+  </section>
+
+  <!-- Main menu -->
+  <section id="menu" class="screen hidden">
+    <div class="menu-card">
+      <div class="logo"><span class="gem"></span><h1>Crystal Vale</h1></div>
+      <p class="tagline">Seven crystals. One sleeping portal. A valley full of sentinels.</p>
+      <div class="buttons">
+        <button class="btn primary" data-action="start">Start Game</button>
+        <button class="btn" data-action="howto">How to Play</button>
+        <button class="btn" data-action="settings">Settings</button>
+      </div>
+      <p id="best" class="muted"></p>
+    </div>
+  </section>
+
+  <!-- How to play -->
+  <section id="howto" class="screen hidden">
+    <div class="menu-card wide">
+      <h2>How to Play</h2>
+      <p class="muted">Find the <b class="cyan">7 energy crystals</b> hidden across the valley, then return to the stone portal and step through it. Lose all your health and the valley claims you.</p>
+      <div class="keys">
+        <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / Arrows</div><div>Move</div>
+        <div><kbd>Mouse</kbd></div><div>Look around &middot; wheel to zoom</div>
+        <div><kbd>Shift</kbd></div><div>Run (uses stamina)</div>
+        <div><kbd>Space</kbd></div><div>Jump &middot; land on a sentinel to crush it</div>
+        <div><kbd>C</kbd> / <kbd>Ctrl</kbd></div><div>Crouch &middot; sneak past sentinels, slip under lasers</div>
+        <div><kbd>F</kbd> / <kbd>Left click</kbd></div><div>Punch</div>
+        <div><kbd>E</kbd></div><div>Interact (chests, portal)</div>
+        <div><kbd>Esc</kbd></div><div>Pause</div>
+      </div>
+      <div class="buttons row"><button class="btn primary" data-action="back">Back</button></div>
+    </div>
+  </section>
+
+  <!-- Settings -->
+  <section id="settings" class="screen hidden">
+    <div class="menu-card wide">
+      <h2>Settings</h2>
+      <label class="field"><span>Mouse sensitivity</span><input id="set-sens" type="range" min="0.3" max="2.5" step="0.05" /><output id="out-sens"></output></label>
+      <label class="field"><span>Master volume</span><input id="set-vol" type="range" min="0" max="1" step="0.05" /><output id="out-vol"></output></label>
+      <label class="field"><span>Graphics quality</span>
+        <select id="set-quality"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select><output></output></label>
+      <label class="field check"><span>Music</span><input id="set-music" type="checkbox" /><output></output></label>
+      <label class="field check"><span>Invert vertical look</span><input id="set-invert" type="checkbox" /><output></output></label>
+      <div class="buttons row"><button class="btn primary" data-action="back">Done</button></div>
+    </div>
+  </section>
+
+  <!-- Pause -->
+  <section id="pause" class="screen dim hidden">
+    <div class="menu-card">
+      <h2>Paused</h2>
+      <div class="buttons">
+        <button class="btn primary" data-action="resume">Resume</button>
+        <button class="btn" data-action="restart">Restart</button>
+        <button class="btn" data-action="settings">Settings</button>
+        <button class="btn" data-action="quit">Main Menu</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Game over -->
+  <section id="gameover" class="screen dim red hidden">
+    <div class="menu-card">
+      <h2 class="danger">You Fell</h2>
+      <p class="muted">The sentinels still guard the valley.</p>
+      <div class="result"><div><span class="label">Score</span><span id="go-score" class="value">0</span></div>
+        <div><span class="label">Crystals</span><span id="go-crystals" class="value">0/7</span></div></div>
+      <div class="buttons">
+        <button class="btn primary" data-action="restart">Try Again</button>
+        <button class="btn" data-action="quit">Main Menu</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Victory -->
+  <section id="victory" class="screen dim gold hidden">
+    <div class="menu-card">
+      <h2 class="win">Portal Restored!</h2>
+      <p class="muted">The valley hums with light again.</p>
+      <div class="result">
+        <div><span class="label">Score</span><span id="v-score" class="value">0</span></div>
+        <div><span class="label">Time bonus</span><span id="v-bonus" class="value">0</span></div>
+        <div><span class="label">Time</span><span id="v-time" class="value">0:00</span></div>
+      </div>
+      <p id="v-best" class="muted"></p>
+      <div class="buttons">
+        <button class="btn primary" data-action="restart">Play Again</button>
+        <button class="btn" data-action="quit">Main Menu</button>
+      </div>
+    </div>
+  </section>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
